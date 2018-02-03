@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: hello-api
+# Question: would you want a monitor application to live in the same pod as the api?
+parameters:
+  - name: TAG_VERSION
+    required: true
+
+  - name: MIN_NUM_REPLICAS
+    value: "2"
+
+  - name: MAX_NUM_REPLICAS
+    value: "4"
+
+  - name: THRESHOLD_CPU_PERCENTAGE
+    value: "60"
+
+  - name: RESERVERED_CPU_MILLICORES
+    value: "0.5"
+
+  - name: RESERVED_MEMORY
+    value: "512Mi"
+
+  - name: LIMITED_CPU_MILLICORES
+    value: "1.0"
+
+  - name: LIMITED_MEMORY
+    value: "1Gi"
+objects:
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      labels:
+        deployTag: hello-${TAG_VERSION}
+      name: hello-api-service-${TAG_VERSION}
+    spec:
+      type: LoadBalancer
+      selector:
+        app: hello-api
+        deploymentconfig: hello-api-deploy-${TAG_VERSION}
+      ports:
+        - name: http
+          port: 80
+          targetPort: 8080
+          protocol: TCP
+
+  - kind: HorizontalPodAutoscaler
+    apiVersion: autoscaling/v2beta1
+    metadata:
+      name: hello-api-hpa-${TAG_VERSION}
+    spec:
+      minReplicas: ${{MIN_NUM_REPLICAS}}
+      maxReplicas: ${{MAX_NUM_REPLICAS}}
+      targetCPUUtilizationPercentage: ${{THRESHOLD_CPU_PERCENTAGE}}
+        apiVersion: v1
+        kind: Deployment
+        name: hello-api-deploy-${TAG_VERSION}
+
+  - kind: NetworkPolicy
+    apiVersion: extensions/v1beta
+    metadata:
+      name: hello-api-np-${TAG_VERSION}
+    spec:
+      podSelector:
+        matchLabels:
+          app: hello-api
+          deploymentconfig: hello-api-deploy-${TAG_VERSION}
+      ingress:
+        from:
+          - namespaceSelector:
+              matchLabels:
+                environment: hello-ci
+
+          - podSelector:
+              matchLabels:
+                app: hello-monitor
+                deploymentconfig: hello-monitor-deploy-${TAG_VERSION}
+        ports:
+          - port: 8080
+            protocol: TCP
+
+  - kind: DeploymentConfig
+    apiVersion: v1
+    metadata:
+      labels:
+        app: hello-api
+        deployTag: hello-${TAG_VERSION}
+      name: hello-api-deploy-${TAG_VERSION}
+    spec:
+      replicas: ${{MIN_NUM_REPLICAS}}
+      revisionHistoryLimit: 2
+      triggers: []
+      selector:
+        app: hello-api
+        deploymentconfig: hello-api-deploy-${TAG_VERSION}
+      template:
+        metadata:
+          labels:
+            app: hello-api
+            deploymentconfig: hello-api-deploy-${TAG_VERSION}
+          name:
+        spec:
+          containers:
+            - name: api
+              imagePullPolicy: Always
+              image: hello-api:${TAG_VERSION}
+              env: []
+              resources:
+                requests:
+                  cpu: ${RESERVED_CPU_MILLICORES}
+                  memory: ${RESERVED_MEMORY}
+                limits:
+                  cpu: ${LIMITED_CPU_MILLICORES}
+                  memory: ${LIMITED_MEMORY}
+#              ports:
+#                - name: http
+#                  containerPort: 8080
+#                  protocol: TCP
+#          imagePullSecretes:
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        app: hello-api
+                    topologyKey: kubernetes.io/hostname
