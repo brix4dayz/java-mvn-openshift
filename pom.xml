@@ -2,28 +2,114 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>brix4dayz.hello</groupId>
-    <artifactId>hello</artifactId>
+    <groupId>io.brix4dayz.hello</groupId>
+    <artifactId>emerging-container-tools</artifactId>
     <packaging>pom</packaging>
-    <version>${hello-version}</version>
+    <version>0.1.0-SNAPSHOT</version>
 
     <properties>
-        <hello-version>0.1.0</hello-version>
+        <docker.registry>index.docker.io</docker.registry>
+        <docker.repo>emerging-container-tools</docker.repo>
+        <image.version>dev</image.version>
+        <java.version>11</java.version>
+        <java-release.version>${java.version}</java-release.version>
+        <jib.skip>true</jib.skip>
+        <jib.version>1.0.0</jib.version>
+        <maven-jar.version>3.1.0</maven-jar.version>
+        <maven-compiler.version>3.8.0</maven-compiler.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <spring-boot.version>2.1.2.RELEASE</spring-boot.version>
     </properties>
-
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>1.5.9.RELEASE</version>
-    </parent>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-    </dependencies>
 
     <modules>
         <module>hello-api</module>
     </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler.version}</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <release>${java-release.version}</release>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                    <configuration>
+                        <classifier>exec</classifier>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.google.cloud.tools</groupId>
+                    <artifactId>jib-maven-plugin</artifactId>
+                    <version>${jib.version}</version>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <from>
+                            <image>library/openjdk:11.0.2-jre-slim</image>
+                        </from>
+                        <to>
+                            <image>${docker.registry}/${docker.repo}/${project.artifactId}:${image.version}</image>
+                        </to>
+                        <container>
+                            <jvmFlags>
+                                <jvmFlag>-XX:+ExitOnOutOfMemoryError</jvmFlag>
+                            </jvmFlags>
+                            <ports>
+                                <port>8080</port>
+                                <port>8443</port>
+                            </ports>
+                        </container>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>
